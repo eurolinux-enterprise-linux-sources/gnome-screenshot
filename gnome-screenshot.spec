@@ -1,33 +1,29 @@
 Name:           gnome-screenshot
-Version:        3.14.0
-Release:        3%{?dist}
+Version:        3.22.0
+Release:        1%{?dist}
 Summary:        A screenshot utility for GNOME
 
-Group:          Applications/System
 License:        GPLv2+
 URL:            http://www.gnome.org
-Source0:        http://download.gnome.org/sources/gnome-screenshot/3.14/gnome-screenshot-%{version}.tar.xz
-
-Patch0:         filenames.patch
-Patch1:         0001-Updated-Italian-translation.patch
+Source0:        http://download.gnome.org/sources/gnome-screenshot/3.22/gnome-screenshot-%{version}.tar.xz
 
 BuildRequires: gtk3-devel
 BuildRequires: libcanberra-devel
 BuildRequires: intltool
 BuildRequires: desktop-file-utils
+BuildRequires: libappstream-glib
 
 Obsoletes: gnome-utils <= 1:3.3
 Obsoletes: gnome-utils-libs <= 1:3.3
 Obsoletes: gnome-utils-devel <= 1:3.3
 
-
 %description
 gnome-screenshot lets you take pictures of your screen.
 
+
 %prep
 %setup -q
-%patch0 -p1 -b .filenames
-%patch1 -p1 -b .italian-translation
+
 
 %build
 %configure
@@ -35,7 +31,7 @@ make %{?_smp_mflags}
 
 
 %install
-make install DESTDIR=$RPM_BUILD_ROOT
+%make_install
 
 %find_lang %{name}
 
@@ -54,15 +50,20 @@ fi
 glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || :
 
 %files -f %{name}.lang
-%doc COPYING
+%license COPYING
 %{_bindir}/gnome-screenshot
 %{_datadir}/GConf/gsettings/gnome-screenshot.convert
+%{_datadir}/appdata/org.gnome.Screenshot.appdata.xml
 %{_datadir}/applications/org.gnome.Screenshot.desktop
 %{_datadir}/dbus-1/services/org.gnome.Screenshot.service
 %{_datadir}/glib-2.0/schemas/org.gnome.gnome-screenshot.gschema.xml
-%doc %{_mandir}/man1/gnome-screenshot.1.gz
+%{_mandir}/man1/gnome-screenshot.1*
 
 %changelog
+* Thu Feb 23 2017 Matthias Clasen <mclasen@redhat.com> - 3.22.0-1
+- Rebase to 3.22.0
+  Resolves: rhbz#1386956
+
 * Mon Feb  8 2016 Rui Matos <rmatos@redhat.com> - 3.14.0-3
 - Update Italian translation
 Resolves: #1272498

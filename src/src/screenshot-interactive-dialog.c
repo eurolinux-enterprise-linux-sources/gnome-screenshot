@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301
  * USA
  */
 
@@ -204,6 +204,7 @@ create_effects_combo (void)
     case 'v': /* vintage */
       gtk_combo_box_set_active (GTK_COMBO_BOX (retval),
                                 SCREENSHOT_EFFECT_VINTAGE);
+      break;
     case 'n': /* none */
       gtk_combo_box_set_active (GTK_COMBO_BOX (retval),
                                 SCREENSHOT_EFFECT_NONE);
@@ -230,7 +231,6 @@ create_effects_frame (GtkWidget   *outer_vbox,
                       const gchar *frame_title)
 {
   GtkWidget *main_vbox, *vbox, *hbox;
-  GtkWidget *align;
   GtkWidget *label;
   GtkWidget *check;
   GtkWidget *combo;
@@ -244,7 +244,8 @@ create_effects_frame (GtkWidget   *outer_vbox,
   title = g_strconcat ("<b>", frame_title, "</b>", NULL);
   label = gtk_label_new (title);
   gtk_label_set_use_markup (GTK_LABEL (label), TRUE);
-  gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
+  gtk_widget_set_halign (label, GTK_ALIGN_START);
+  gtk_widget_set_valign (label, GTK_ALIGN_CENTER);
   gtk_box_pack_start (GTK_BOX (main_vbox), label, FALSE, FALSE, 0);
   gtk_widget_show (label);
   g_free (title);
@@ -253,13 +254,9 @@ create_effects_frame (GtkWidget   *outer_vbox,
   gtk_box_pack_start (GTK_BOX (main_vbox), hbox, FALSE, FALSE, 0);
   gtk_widget_show (hbox);
 
-  align = gtk_alignment_new (0.0, 0.0, 0.0, 0.0);
-  gtk_alignment_set_padding (GTK_ALIGNMENT (align), 0, 0, 12, 0);
-  gtk_box_pack_start (GTK_BOX (hbox), align, FALSE, FALSE, 0);
-  gtk_widget_show (align);
-
   vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
-  gtk_container_add (GTK_CONTAINER (align), vbox);
+  gtk_box_pack_start (GTK_BOX (hbox), vbox, FALSE, FALSE, 0);
+  gtk_widget_set_margin_start (vbox, 12);
   gtk_widget_show (vbox);
 
   /** Include pointer **/
@@ -292,7 +289,8 @@ create_effects_frame (GtkWidget   *outer_vbox,
 
   label = gtk_label_new_with_mnemonic (_("Apply _effect:"));
   gtk_widget_set_sensitive (label, screenshot_config->take_window_shot);
-  gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
+  gtk_widget_set_halign (label, GTK_ALIGN_START);
+  gtk_widget_set_valign (label, GTK_ALIGN_CENTER);
   gtk_box_pack_start (GTK_BOX (hbox), label, FALSE, FALSE, 0);
   gtk_widget_show (label);
   effect_label = label;
@@ -310,7 +308,6 @@ create_screenshot_frame (GtkWidget   *outer_vbox,
                          const gchar *frame_title)
 {
   GtkWidget *main_vbox, *vbox, *hbox;
-  GtkWidget *align;
   GtkWidget *radio;
   GtkWidget *image;
   GtkWidget *spin;
@@ -326,7 +323,8 @@ create_screenshot_frame (GtkWidget   *outer_vbox,
   title = g_strconcat ("<b>", frame_title, "</b>", NULL);
   label = gtk_label_new (title);
   gtk_label_set_use_markup (GTK_LABEL (label), TRUE);
-  gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
+  gtk_widget_set_halign (label, GTK_ALIGN_START);
+  gtk_widget_set_valign (label, GTK_ALIGN_CENTER);
   gtk_box_pack_start (GTK_BOX (main_vbox), label, FALSE, FALSE, 0);
   gtk_widget_show (label);
   g_free (title);
@@ -335,13 +333,8 @@ create_screenshot_frame (GtkWidget   *outer_vbox,
   gtk_box_pack_start (GTK_BOX (main_vbox), hbox, FALSE, FALSE, 0);
   gtk_widget_show (hbox);
 
-  align = gtk_alignment_new (0.0, 0.0, 0.0, 0.0);
-  gtk_widget_set_size_request (align, 48, -1);
-  gtk_box_pack_start (GTK_BOX (hbox), align, FALSE, FALSE, 0);
-  gtk_widget_show (align);
-
   image = gtk_image_new_from_icon_name (SCREENSHOOTER_ICON, GTK_ICON_SIZE_DIALOG);
-  gtk_container_add (GTK_CONTAINER (align), image);
+  gtk_box_pack_start (GTK_BOX (hbox), image, FALSE, FALSE, 0);
   gtk_widget_show (image);
 
   vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
@@ -398,7 +391,8 @@ create_screenshot_frame (GtkWidget   *outer_vbox,
    * delay of <spin button> seconds".
    */
   label = gtk_label_new_with_mnemonic (_("Grab after a _delay of"));
-  gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
+  gtk_widget_set_halign (label, GTK_ALIGN_START);
+  gtk_widget_set_valign (label, GTK_ALIGN_CENTER);
   gtk_box_pack_start (GTK_BOX (delay_hbox), label, FALSE, FALSE, 0);
   gtk_widget_show (label);
 
@@ -418,7 +412,8 @@ create_screenshot_frame (GtkWidget   *outer_vbox,
    * delay of <spin button> seconds".
    */
   label = gtk_label_new (_("seconds"));
-  gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
+  gtk_widget_set_halign (label, GTK_ALIGN_START);
+  gtk_widget_set_valign (label, GTK_ALIGN_CENTER);
   gtk_box_pack_end (GTK_BOX (delay_hbox), label, FALSE, FALSE, 0);
   gtk_widget_show (label);
 }
@@ -430,7 +425,7 @@ typedef struct {
 } CaptureData;
 
 static void
-capure_button_clicked_cb (GtkButton *button, CaptureData *data)
+capture_button_clicked_cb (GtkButton *button, CaptureData *data)
 {
   gtk_widget_destroy (data->widget);
   data->callback (data->user_data);
@@ -497,7 +492,7 @@ screenshot_interactive_dialog_new (CaptureClickedCallback f, gpointer user_data)
   data->widget = dialog;
   data->callback = f;
   data->user_data = user_data;
-  g_signal_connect (button, "clicked", G_CALLBACK (capure_button_clicked_cb), data);
+  g_signal_connect (button, "clicked", G_CALLBACK (capture_button_clicked_cb), data);
   gtk_size_group_add_widget (size_group, button);
   gtk_header_bar_pack_end (GTK_HEADER_BAR (header_bar), button);
   gtk_widget_set_can_default (button, TRUE);

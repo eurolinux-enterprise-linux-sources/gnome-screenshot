@@ -16,7 +16,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301
  * USA
  */
 
@@ -773,10 +773,52 @@ action_about (GSimpleAction *action,
                          NULL);
 }
 
+static void
+action_screen_shot (GSimpleAction *action,
+                    GVariant *parameter,
+                    gpointer user_data)
+{
+  ScreenshotApplication *self = SCREENSHOT_APPLICATION (user_data);
+
+  screenshot_config_parse_command_line (FALSE, /* clipboard */
+                                        FALSE,  /* window */
+                                        FALSE, /* area */
+                                        FALSE, /* include border */
+                                        FALSE, /* disable border */
+                                        FALSE, /* include pointer */
+                                        NULL,  /* border effect */
+                                        0,     /* delay */
+                                        FALSE, /* interactive */
+                                        NULL); /* file */
+  screenshot_start (self);
+}
+
+static void
+action_window_shot (GSimpleAction *action,
+                    GVariant *parameter,
+                    gpointer user_data)
+{
+  ScreenshotApplication *self = SCREENSHOT_APPLICATION (user_data);
+
+  screenshot_config_parse_command_line (FALSE, /* clipboard */
+                                        TRUE,  /* window */
+                                        FALSE, /* area */
+                                        FALSE, /* include border */
+                                        FALSE, /* disable border */
+                                        FALSE, /* include pointer */
+                                        NULL,  /* border effect */
+                                        0,     /* delay */
+                                        FALSE, /* interactive */
+                                        NULL); /* file */
+  screenshot_start (self);
+}
+
 static GActionEntry action_entries[] = {
   { "about", action_about, NULL, NULL, NULL },
   { "help", action_help, NULL, NULL, NULL },
-  { "quit", action_quit, NULL, NULL, NULL }
+  { "quit", action_quit, NULL, NULL, NULL },
+  { "screen-shot", action_screen_shot, NULL, NULL, NULL },
+  { "window-shot", action_window_shot, NULL, NULL, NULL }
 };
 
 static void
