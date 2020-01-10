@@ -20,7 +20,8 @@
  * USA
  */
 
-#include <config.h>
+#include "config.h"
+
 #include <gdk/gdkx.h>
 #include <gdk/gdkkeysyms.h>
 #include <fcntl.h>
@@ -107,17 +108,22 @@ set_recent_entry (ScreenshotApplication *self)
 }
 
 static void
+screenshot_close_interactive_dialog (ScreenshotApplication *self)
+{
+  ScreenshotDialog *dialog = self->priv->dialog;
+  save_folder_to_settings (self);
+  gtk_widget_destroy (dialog->dialog);
+  g_free (dialog);
+}
+
+static void
 save_pixbuf_handle_success (ScreenshotApplication *self)
 {
   set_recent_entry (self);
 
   if (screenshot_config->interactive)
     {
-      ScreenshotDialog *dialog = self->priv->dialog;
-
-      save_folder_to_settings (self);
-      gtk_widget_destroy (dialog->dialog);
-      g_free (dialog);
+      screenshot_close_interactive_dialog (self);
     }
   else
     {
@@ -142,7 +148,7 @@ save_pixbuf_handle_error (ScreenshotApplication *self,
           gchar *folder_uri = g_path_get_basename (folder);
           gchar *folder_name = g_uri_unescape_string (folder_uri, NULL);
           gchar *file_name = screenshot_dialog_get_filename (dialog);
-          gchar *detail = g_strdup_printf (_("A file named \"%s\" already exists in \"%s\""),
+          gchar *detail = g_strdup_printf (_("A file named “%s” already exists in “%s”"),
                                            file_name, folder_name);
           gint response;
                                              
@@ -283,19 +289,6 @@ save_with_description (ScreenshotApplication *self,
 }
 
 static void
-save_with_profile (ScreenshotApplication *self,
-                   GFileOutputStream     *os,
-                   gchar                 *format)
-{
-  gdk_pixbuf_save_to_stream_async (self->priv->screenshot,
-                                   G_OUTPUT_STREAM (os),
-                                   format, NULL,
-                                   save_pixbuf_ready_cb, self,
-                                   "icc-profile", self->priv->icc_profile_base64,
-                                   NULL);
-}
-
-static void
 save_with_no_profile_or_description (ScreenshotApplication *self,
                                      GFileOutputStream     *os,
                                      gchar                 *format)
@@ -394,6 +387,13 @@ screenshot_save_to_file (ScreenshotApplication *self)
 }
 
 static void
+screenshot_back (ScreenshotApplication *self)
+{
+  screenshot_close_interactive_dialog (self);
+  screenshot_show_interactive_dialog (self);
+}
+
+static void
 screenshot_save_to_clipboard (ScreenshotApplication *self)
 {
   GtkClipboard *clipboard;
@@ -417,6 +417,9 @@ screenshot_dialog_response_cb (ScreenshotResponse response,
       break;
     case SCREENSHOT_RESPONSE_COPY:
       screenshot_save_to_clipboard (self);
+      break;
+    case SCREENSHOT_RESPONSE_BACK:
+      screenshot_back (self);
       break;
     default:
       g_assert_not_reached ();
@@ -832,6 +835,7 @@ screenshot_application_startup (GApplication *app)
 
   screenshot_load_config ();
 
+  g_set_application_name (_("Screenshot"));
   gtk_window_set_default_icon_name (SCREENSHOOTER_ICON);
 
   g_action_map_add_action_entries (G_ACTION_MAP (self), action_entries,

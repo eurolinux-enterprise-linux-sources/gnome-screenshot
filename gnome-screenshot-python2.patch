@@ -1,0 +1,8 @@
+--- gnome-screenshot-3.26.0/build-aux/postinstall.py.python2	2017-10-30 12:58:31.000000000 +0100
++++ gnome-screenshot-3.26.0/build-aux/postinstall.py	2018-05-24 21:51:03.628740884 +0200
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python3
++#!/usr/bin/env python2
+ 
+ import os
+ import subprocess

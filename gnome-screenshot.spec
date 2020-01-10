@@ -1,17 +1,21 @@
 Name:           gnome-screenshot
-Version:        3.22.0
+Version:        3.26.0
 Release:        1%{?dist}
 Summary:        A screenshot utility for GNOME
 
 License:        GPLv2+
 URL:            http://www.gnome.org
-Source0:        http://download.gnome.org/sources/gnome-screenshot/3.22/gnome-screenshot-%{version}.tar.xz
+Source0:        http://download.gnome.org/sources/gnome-screenshot/3.26/gnome-screenshot-%{version}.tar.xz
 
-BuildRequires: gtk3-devel
-BuildRequires: libcanberra-devel
-BuildRequires: intltool
-BuildRequires: desktop-file-utils
-BuildRequires: libappstream-glib
+# Fix the build with Python 2
+Patch0:         gnome-screenshot-python2.patch
+
+BuildRequires:  desktop-file-utils
+BuildRequires:  gettext
+BuildRequires:  gtk3-devel
+BuildRequires:  libappstream-glib-devel
+BuildRequires:  libcanberra-devel
+BuildRequires:  meson
 
 Obsoletes: gnome-utils <= 1:3.3
 Obsoletes: gnome-utils-libs <= 1:3.3
@@ -23,15 +27,16 @@ gnome-screenshot lets you take pictures of your screen.
 
 %prep
 %setup -q
+%patch0 -p1
 
 
 %build
-%configure
-make %{?_smp_mflags}
+%meson
+%meson_build
 
 
 %install
-%make_install
+%meson_install
 
 %find_lang %{name}
 
@@ -53,13 +58,17 @@ glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || :
 %license COPYING
 %{_bindir}/gnome-screenshot
 %{_datadir}/GConf/gsettings/gnome-screenshot.convert
-%{_datadir}/appdata/org.gnome.Screenshot.appdata.xml
+%{_datadir}/metainfo/org.gnome.Screenshot.metainfo.xml
 %{_datadir}/applications/org.gnome.Screenshot.desktop
 %{_datadir}/dbus-1/services/org.gnome.Screenshot.service
 %{_datadir}/glib-2.0/schemas/org.gnome.gnome-screenshot.gschema.xml
 %{_mandir}/man1/gnome-screenshot.1*
 
 %changelog
+* Wed Nov 01 2017 Kalev Lember <klember@redhat.com> - 3.26.0-1
+- Update to 3.26.0
+- Resolves: #1568233
+
 * Thu Feb 23 2017 Matthias Clasen <mclasen@redhat.com> - 3.22.0-1
 - Rebase to 3.22.0
   Resolves: rhbz#1386956
