@@ -14,19 +14,17 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
  * USA
  */
 
-#include "config.h"
-
+#include <config.h>
 #include <gio/gio.h>
 #include <glib/gi18n.h>
 #include <pwd.h>
 #include <string.h>
 
 #include "screenshot-filename-builder.h"
-#include "screenshot-config.h"
 
 typedef enum
 {
@@ -42,6 +40,8 @@ typedef struct
   char *screenshot_origin;
   int iteration;
   TestType type;
+
+  GSimpleAsyncResult *async_result;
 } AsyncExistenceJob;
 
 /* Taken from gnome-vfs-utils.c */
@@ -116,11 +116,11 @@ sanitize_save_directory (const gchar *save_dir)
 static char *
 build_path (AsyncExistenceJob *job)
 {
-  const gchar *base_path, *file_type;
-  char *retval, *file_name, *origin;
+  const gchar *base_path;
+  char *retval, *file_name;
+  char *origin;
 
   base_path = job->base_paths[job->type];
-  file_type = screenshot_config->file_type;
 
   if (base_path == NULL ||
       base_path[0] == '\0')
@@ -131,7 +131,7 @@ build_path (AsyncExistenceJob *job)
       GDateTime *d;
 
       d = g_date_time_new_now_local ();
-      origin = g_date_time_format (d, "%Y-%m-%d %H-%M-%S");
+      origin = g_date_time_format (d, "%Y-%m-%d %H:%M:%S");
       g_date_time_unref (d);
     }
   else
@@ -139,22 +139,16 @@ build_path (AsyncExistenceJob *job)
 
   if (job->iteration == 0)
     {
-      /* translators: this is the name of the file that gets made up with the
-       * screenshot if the entire screen is taken. The first placeholder is a
-       * timestamp (e.g. "2017-05-21 12-24-03"); the second placeholder is the
-       * file format (e.g. "png").
-       */
-      file_name = g_strdup_printf (_("Screenshot from %s.%s"), origin, file_type);
+      /* translators: this is the name of the file that gets made up
+       * with the screenshot if the entire screen is taken */
+      file_name = g_strdup_printf (_("Screenshot from %s.png"), origin);
     }
   else
     {
-      /* translators: this is the name of the file that gets made up with the
-       * screenshot if the entire screen is taken and the simpler filename
-       * already exists. The first and second placeholders are a timestamp and
-       * a counter to make it unique (e.g. "2017-05-21 12-24-03 - 2"); the third
-       * placeholder is the file format (e.g. "png").
-       */
-      file_name = g_strdup_printf (_("Screenshot from %s - %d.%s"), origin, job->iteration, file_type);
+      /* translators: this is the name of the file that gets
+       * made up with the screenshot if the entire screen is
+       * taken */
+      file_name = g_strdup_printf (_("Screenshot from %s - %d.png"), origin, job->iteration);
     }
 
   retval = g_build_filename (base_path, file_name, NULL);
@@ -173,6 +167,8 @@ async_existence_job_free (AsyncExistenceJob *job)
     g_free (job->base_paths[idx]);
 
   g_free (job->screenshot_origin);
+
+  g_clear_object (&job->async_result);
 
   g_slice_free (AsyncExistenceJob, job);
 }
@@ -193,11 +189,10 @@ prepare_next_cycle (AsyncExistenceJob *job)
   return res;
 }
 
-static void
-try_check_file (GTask *task,
-                gpointer source_object,
-                gpointer data,
-                GCancellable *cancellable)
+static gboolean
+try_check_file (GIOSchedulerJob *io_job,
+                GCancellable *cancellable,
+                gpointer data)
 {
   AsyncExistenceJob *job = data;
   GFile *file;
@@ -291,13 +286,18 @@ out:
   g_error_free (error);
   g_object_unref (file);
 
+  g_simple_async_result_set_op_res_gpointer (job->async_result,
+                                             retval, NULL);
   if (retval == NULL)
-    g_task_return_new_error (task,
-                             G_IO_ERROR,
-                             G_IO_ERROR_FAILED,
-                             "%s", "Failed to find a valid place to save");
+    g_simple_async_result_set_error (job->async_result,
+                                     G_IO_ERROR,
+                                     G_IO_ERROR_FAILED,
+                                     "%s", "Failed to find a valid place to save");
 
-  g_task_return_pointer (task, retval, NULL);
+  g_simple_async_result_complete_in_idle (job->async_result);
+  async_existence_job_free (job);
+
+  return FALSE;
 }
 
 void
@@ -307,7 +307,6 @@ screenshot_build_filename_async (const char *save_dir,
                                  gpointer user_data)
 {
   AsyncExistenceJob *job;
-  GTask *task;
 
   job = g_slice_new0 (AsyncExistenceJob);
 
@@ -319,16 +318,21 @@ screenshot_build_filename_async (const char *save_dir,
 
   job->screenshot_origin = g_strdup (screenshot_origin);
 
-  task = g_task_new (NULL, NULL, callback, user_data);
-  g_task_set_task_data (task, job, (GDestroyNotify) async_existence_job_free);
+  job->async_result = g_simple_async_result_new (NULL,
+                                                 callback, user_data,
+                                                 screenshot_build_filename_async);
 
-  g_task_run_in_thread (task, try_check_file);
-  g_object_unref (task);
+  g_io_scheduler_push_job (try_check_file,
+                           job, NULL,
+                           G_PRIORITY_DEFAULT, NULL);
 }
 
 gchar *
 screenshot_build_filename_finish (GAsyncResult *result,
                                   GError **error)
 {
-  return g_task_propagate_pointer (G_TASK (result), error);
+  if (g_simple_async_result_propagate_error (G_SIMPLE_ASYNC_RESULT (result), error))
+    return NULL;
+
+  return g_simple_async_result_get_op_res_gpointer (G_SIMPLE_ASYNC_RESULT (result));
 }

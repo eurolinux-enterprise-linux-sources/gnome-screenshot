@@ -1,49 +1,42 @@
 Name:           gnome-screenshot
-Version:        3.26.0
-Release:        1%{?dist}
+Version:        3.8.3
+Release:        3%{?dist}
 Summary:        A screenshot utility for GNOME
 
+Group:          Applications/System
 License:        GPLv2+
 URL:            http://www.gnome.org
-Source0:        http://download.gnome.org/sources/gnome-screenshot/3.26/gnome-screenshot-%{version}.tar.xz
+Source0:        http://download.gnome.org/sources/gnome-screenshot/3.8/gnome-screenshot-%{version}.tar.xz
 
-# Fix the build with Python 2
-Patch0:         gnome-screenshot-python2.patch
-
-BuildRequires:  desktop-file-utils
-BuildRequires:  gettext
-BuildRequires:  gtk3-devel
-BuildRequires:  libappstream-glib-devel
-BuildRequires:  libcanberra-devel
-BuildRequires:  meson
+BuildRequires: gtk3-devel
+BuildRequires: libcanberra-devel
+BuildRequires: intltool
+BuildRequires: desktop-file-utils
 
 Obsoletes: gnome-utils <= 1:3.3
 Obsoletes: gnome-utils-libs <= 1:3.3
 Obsoletes: gnome-utils-devel <= 1:3.3
 
+
 %description
 gnome-screenshot lets you take pictures of your screen.
 
-
 %prep
 %setup -q
-%patch0 -p1
 
 
 %build
-%meson
-%meson_build
+%configure
+make %{?_smp_mflags}
 
 
 %install
-%meson_install
+make install DESTDIR=$RPM_BUILD_ROOT
+
+# the desktop file contains Canonical 'enhancements' which don't validate :-(
+# desktop-file-validate $RPM_BUILD_ROOT%%{_datadir}/applications/gnome-screenshot.desktop
 
 %find_lang %{name}
-
-
-%check
-desktop-file-validate $RPM_BUILD_ROOT%{_datadir}/applications/org.gnome.Screenshot.desktop
-
 
 %postun
 if [ $1 -eq 0 ]; then
@@ -55,76 +48,28 @@ fi
 glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || :
 
 %files -f %{name}.lang
-%license COPYING
+%doc COPYING
 %{_bindir}/gnome-screenshot
 %{_datadir}/GConf/gsettings/gnome-screenshot.convert
-%{_datadir}/metainfo/org.gnome.Screenshot.metainfo.xml
-%{_datadir}/applications/org.gnome.Screenshot.desktop
-%{_datadir}/dbus-1/services/org.gnome.Screenshot.service
+%{_datadir}/applications/gnome-screenshot.desktop
 %{_datadir}/glib-2.0/schemas/org.gnome.gnome-screenshot.gschema.xml
-%{_mandir}/man1/gnome-screenshot.1*
+%doc %{_mandir}/man1/gnome-screenshot.1.gz
 
 %changelog
-* Wed Nov 01 2017 Kalev Lember <klember@redhat.com> - 3.26.0-1
-- Update to 3.26.0
-- Resolves: #1568233
+* Fri Jan 24 2014 Daniel Mach <dmach@redhat.com> - 3.8.3-3
+- Mass rebuild 2014-01-24
 
-* Thu Feb 23 2017 Matthias Clasen <mclasen@redhat.com> - 3.22.0-1
-- Rebase to 3.22.0
-  Resolves: rhbz#1386956
+* Fri Dec 27 2013 Daniel Mach <dmach@redhat.com> - 3.8.3-2
+- Mass rebuild 2013-12-27
 
-* Mon Feb  8 2016 Rui Matos <rmatos@redhat.com> - 3.14.0-3
-- Update Italian translation
-Resolves: #1272498
+* Fri Jul 12 2013 Rui Matos <rmatos@redhat.com> - 3.8.3-1
+- Update to 3.8.3
+- Drop upstreamed patch
 
-* Thu May 14 2015 Rui Matos <rmatos@redhat.com> - 3.14.0-2
-- Don't use colons in filenames
-Resolves: #1162647
+* Mon Jun 24 2013 Matthias Clasen <mclasen@redhat.com> - 3.8.2-2
+- Update man page
 
-* Tue Sep 23 2014 Kalev Lember <kalevlember@gmail.com> - 3.14.0-1
-- Update to 3.14.0
-
-* Tue Sep 16 2014 Kalev Lember <kalevlember@gmail.com> - 3.13.92-1
-- Update to 3.13.92
-
-* Fri Sep 05 2014 Kalev Lember <kalevlember@gmail.com> - 3.13.90-2.gitcbdd3f5
-- Update to today's git snapshot (#1136959)
-
-* Thu Aug 21 2014 Kalev Lember <kalevlember@gmail.com> - 3.13.90-1
-- Update to 3.13.90
-- Validate the desktop file
-
-* Sat Aug 16 2014 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 3.12.0-3
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_21_22_Mass_Rebuild
-
-* Sat Jun 07 2014 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 3.12.0-2
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_21_Mass_Rebuild
-
-* Tue Mar 25 2014 Kalev Lember <kalevlember@gmail.com> - 3.12.0-1
-- Update to 3.12.0
-
-* Tue Feb 18 2014 Richard Hughes <rhughes@redhat.com> - 3.11.90-1
-- Update to 3.11.90
-
-* Tue Nov 19 2013 Richard Hughes <rhughes@redhat.com> - 3.10.1-1
-- Update to 3.10.1
-
-* Wed Sep 25 2013 Kalev Lember <kalevlember@gmail.com> - 3.10.0-1
-- Update to 3.10.0
-
-* Thu Aug 22 2013 Kalev Lember <kalevlember@gmail.com> - 3.9.90-1
-- Update to 3.9.90
-
-* Sat Aug 03 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 3.9.4-2
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_20_Mass_Rebuild
-
-* Tue Jul 16 2013 Richard Hughes <rhughes@redhat.com> - 3.9.4-1
-- Update to 3.9.4
-
-* Fri Jun 21 2013 Kalev Lember <kalevlember@gmail.com> - 3.9.3-1
-- Update to 3.9.3
-
-* Tue May 14 2013 Richard Hughes <rhughes@redhat.com> - 3.8.2-1
+* Mon May 13 2013 Matthias Clasen <mclasen@redhat.com> - 3.8.2-1
 - Update to 3.8.2
 
 * Mon Apr 15 2013 Kalev Lember <kalevlember@gmail.com> - 3.8.1-1

@@ -15,11 +15,10 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the
- * Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  */
 
-#include "config.h"
-
+#include <config.h>
 #include <gdk/gdkkeysyms.h>
 #include <gtk/gtk.h>
 #include <glib.h>

@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the
- * Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  */
 
 #ifndef __SCREENSHOT_SHADOW_H__
@@ -24,6 +24,5 @@
 
 void screenshot_add_shadow (GdkPixbuf **src);
 void screenshot_add_border (GdkPixbuf **src);
-void screenshot_add_vintage (GdkPixbuf **src);
 
 #endif /* __SCREENSHOT_SHADOW_H__ */

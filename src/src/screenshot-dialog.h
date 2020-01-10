@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the
- * Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  */
 
 #ifndef __SCREENSHOT_DIALOG_H__
@@ -24,9 +24,7 @@
 
 typedef enum {
   SCREENSHOT_RESPONSE_SAVE,
-  SCREENSHOT_RESPONSE_COPY,
-  SCREENSHOT_RESPONSE_BACK
-
+  SCREENSHOT_RESPONSE_COPY
 } ScreenshotResponse;
 
 typedef void (*SaveScreenshotCallback) (ScreenshotResponse response, gpointer *user_data);
@@ -40,7 +38,6 @@ typedef struct {
   GtkWidget *filename_entry;
   GtkWidget *save_button;
   GtkWidget *copy_button;
-  GtkWidget *back_button;
 
   gint drag_x;
   gint drag_y;

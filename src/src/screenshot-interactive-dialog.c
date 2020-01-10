@@ -3,7 +3,6 @@
  * Copyright (C) 2001 Jonathan Blandford <jrb@alum.mit.edu>
  * Copyright (C) 2006 Emmanuele Bassi <ebassi@gnome.org>
  * Copyright (C) 2008, 2011 Cosimo Cecchi <cosimoc@gnome.org>
- * Copyright (C) 2013 Nils Dagsson Moskopp <nils@dieweltistgarnichtso.net>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -17,12 +16,11 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
  * USA
  */
 
-#include "config.h"
-
+#include <config.h>
 #include <glib/gi18n.h>
 
 #include "screenshot-config.h"
@@ -49,8 +47,7 @@ enum
 typedef enum {
   SCREENSHOT_EFFECT_NONE,
   SCREENSHOT_EFFECT_SHADOW,
-  SCREENSHOT_EFFECT_BORDER,
-  SCREENSHOT_EFFECT_VINTAGE
+  SCREENSHOT_EFFECT_BORDER
 } ScreenshotEffectType;
 
 #define TARGET_TOGGLE_DESKTOP 0
@@ -148,16 +145,15 @@ typedef struct {
   const gchar *nick;
 } ScreenshotEffect;
 
+/* Translators:
+ * these are the names of the effects available which will be
+ * displayed inside a combo box in interactive mode for the user
+ * to chooser.
+ */
 static const ScreenshotEffect effects[] = {
-  /* Translators:
-   * these are the names of the effects available which will be
-   * displayed inside a combo box in interactive mode for the user
-   * to chooser.
-   */
   { SCREENSHOT_EFFECT_NONE, N_("None"), "none" },
   { SCREENSHOT_EFFECT_SHADOW, N_("Drop shadow"), "shadow" },
-  { SCREENSHOT_EFFECT_BORDER, N_("Border"), "border" },
-  { SCREENSHOT_EFFECT_VINTAGE, N_("Vintage"), "vintage" }
+  { SCREENSHOT_EFFECT_BORDER, N_("Border"), "border" }
 };
 
 static guint n_effects = G_N_ELEMENTS (effects);
@@ -202,10 +198,6 @@ create_effects_combo (void)
       gtk_combo_box_set_active (GTK_COMBO_BOX (retval),
                                 SCREENSHOT_EFFECT_BORDER);
       break;
-    case 'v': /* vintage */
-      gtk_combo_box_set_active (GTK_COMBO_BOX (retval),
-                                SCREENSHOT_EFFECT_VINTAGE);
-      break;
     case 'n': /* none */
       gtk_combo_box_set_active (GTK_COMBO_BOX (retval),
                                 SCREENSHOT_EFFECT_NONE);
@@ -232,6 +224,7 @@ create_effects_frame (GtkWidget   *outer_vbox,
                       const gchar *frame_title)
 {
   GtkWidget *main_vbox, *vbox, *hbox;
+  GtkWidget *align;
   GtkWidget *label;
   GtkWidget *check;
   GtkWidget *combo;
@@ -245,8 +238,7 @@ create_effects_frame (GtkWidget   *outer_vbox,
   title = g_strconcat ("<b>", frame_title, "</b>", NULL);
   label = gtk_label_new (title);
   gtk_label_set_use_markup (GTK_LABEL (label), TRUE);
-  gtk_widget_set_halign (label, GTK_ALIGN_START);
-  gtk_widget_set_valign (label, GTK_ALIGN_CENTER);
+  gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
   gtk_box_pack_start (GTK_BOX (main_vbox), label, FALSE, FALSE, 0);
   gtk_widget_show (label);
   g_free (title);
@@ -255,9 +247,13 @@ create_effects_frame (GtkWidget   *outer_vbox,
   gtk_box_pack_start (GTK_BOX (main_vbox), hbox, FALSE, FALSE, 0);
   gtk_widget_show (hbox);
 
+  align = gtk_alignment_new (0.0, 0.0, 0.0, 0.0);
+  gtk_alignment_set_padding (GTK_ALIGNMENT (align), 0, 0, 12, 0);
+  gtk_box_pack_start (GTK_BOX (hbox), align, FALSE, FALSE, 0);
+  gtk_widget_show (align);
+
   vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
-  gtk_box_pack_start (GTK_BOX (hbox), vbox, FALSE, FALSE, 0);
-  gtk_widget_set_margin_start (vbox, 12);
+  gtk_container_add (GTK_CONTAINER (align), vbox);
   gtk_widget_show (vbox);
 
   /** Include pointer **/
@@ -290,8 +286,7 @@ create_effects_frame (GtkWidget   *outer_vbox,
 
   label = gtk_label_new_with_mnemonic (_("Apply _effect:"));
   gtk_widget_set_sensitive (label, screenshot_config->take_window_shot);
-  gtk_widget_set_halign (label, GTK_ALIGN_START);
-  gtk_widget_set_valign (label, GTK_ALIGN_CENTER);
+  gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
   gtk_box_pack_start (GTK_BOX (hbox), label, FALSE, FALSE, 0);
   gtk_widget_show (label);
   effect_label = label;
@@ -309,6 +304,7 @@ create_screenshot_frame (GtkWidget   *outer_vbox,
                          const gchar *frame_title)
 {
   GtkWidget *main_vbox, *vbox, *hbox;
+  GtkWidget *align;
   GtkWidget *radio;
   GtkWidget *image;
   GtkWidget *spin;
@@ -324,8 +320,7 @@ create_screenshot_frame (GtkWidget   *outer_vbox,
   title = g_strconcat ("<b>", frame_title, "</b>", NULL);
   label = gtk_label_new (title);
   gtk_label_set_use_markup (GTK_LABEL (label), TRUE);
-  gtk_widget_set_halign (label, GTK_ALIGN_START);
-  gtk_widget_set_valign (label, GTK_ALIGN_CENTER);
+  gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
   gtk_box_pack_start (GTK_BOX (main_vbox), label, FALSE, FALSE, 0);
   gtk_widget_show (label);
   g_free (title);
@@ -334,8 +329,14 @@ create_screenshot_frame (GtkWidget   *outer_vbox,
   gtk_box_pack_start (GTK_BOX (main_vbox), hbox, FALSE, FALSE, 0);
   gtk_widget_show (hbox);
 
-  image = gtk_image_new_from_icon_name (SCREENSHOOTER_ICON, GTK_ICON_SIZE_DIALOG);
-  gtk_box_pack_start (GTK_BOX (hbox), image, FALSE, FALSE, 0);
+  align = gtk_alignment_new (0.0, 0.0, 0.0, 0.0);
+  gtk_widget_set_size_request (align, 48, -1);
+  gtk_box_pack_start (GTK_BOX (hbox), align, FALSE, FALSE, 0);
+  gtk_widget_show (align);
+
+  image = gtk_image_new_from_stock (SCREENSHOOTER_ICON,
+                                    GTK_ICON_SIZE_DIALOG);
+  gtk_container_add (GTK_CONTAINER (align), image);
   gtk_widget_show (image);
 
   vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
@@ -392,8 +393,7 @@ create_screenshot_frame (GtkWidget   *outer_vbox,
    * delay of <spin button> seconds".
    */
   label = gtk_label_new_with_mnemonic (_("Grab after a _delay of"));
-  gtk_widget_set_halign (label, GTK_ALIGN_START);
-  gtk_widget_set_valign (label, GTK_ALIGN_CENTER);
+  gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
   gtk_box_pack_start (GTK_BOX (delay_hbox), label, FALSE, FALSE, 0);
   gtk_widget_show (label);
 
@@ -413,8 +413,7 @@ create_screenshot_frame (GtkWidget   *outer_vbox,
    * delay of <spin button> seconds".
    */
   label = gtk_label_new (_("seconds"));
-  gtk_widget_set_halign (label, GTK_ALIGN_START);
-  gtk_widget_set_valign (label, GTK_ALIGN_CENTER);
+  gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
   gtk_box_pack_end (GTK_BOX (delay_hbox), label, FALSE, FALSE, 0);
   gtk_widget_show (label);
 }
@@ -426,7 +425,7 @@ typedef struct {
 } CaptureData;
 
 static void
-capture_button_clicked_cb (GtkButton *button, CaptureData *data)
+capure_button_clicked_cb (GtkButton *button, CaptureData *data)
 {
   gtk_widget_destroy (data->widget);
   data->callback (data->user_data);
@@ -438,20 +437,15 @@ screenshot_interactive_dialog_new (CaptureClickedCallback f, gpointer user_data)
 {
   GtkWidget *dialog;
   GtkWidget *main_vbox;
-  GtkWidget *header_bar;
+  GtkWidget *button_box;
   GtkWidget *button;
-  GtkStyleContext *context;
-  GtkSizeGroup *size_group;
+  gboolean shows_app_menu;
+  GtkSettings *settings;
   CaptureData *data;
 
   dialog = gtk_application_window_new (GTK_APPLICATION (g_application_get_default ()));
-
-  header_bar = gtk_header_bar_new ();
-  gtk_header_bar_set_show_close_button (GTK_HEADER_BAR (header_bar), TRUE);
-  gtk_header_bar_set_decoration_layout (GTK_HEADER_BAR (header_bar), "menu");
-  gtk_window_set_titlebar (GTK_WINDOW (dialog), header_bar);
-
   gtk_window_set_resizable (GTK_WINDOW (dialog), FALSE);
+  gtk_window_set_title (GTK_WINDOW (dialog), _("Take Screenshot"));
   gtk_window_set_position (GTK_WINDOW (dialog), GTK_WIN_POS_CENTER);
 
   gtk_container_set_border_width (GTK_CONTAINER (dialog), 5);
@@ -464,33 +458,36 @@ screenshot_interactive_dialog_new (CaptureClickedCallback f, gpointer user_data)
   create_screenshot_frame (main_vbox, _("Take Screenshot"));
   create_effects_frame (main_vbox, _("Effects"));
 
-  size_group = gtk_size_group_new (GTK_SIZE_GROUP_HORIZONTAL);
+  button_box = gtk_button_box_new (GTK_ORIENTATION_HORIZONTAL);
+  gtk_button_box_set_layout (GTK_BUTTON_BOX (button_box), GTK_BUTTONBOX_END);
+  gtk_container_add (GTK_CONTAINER (main_vbox), button_box);
+
+  /* add help as a dialog button if we're not showing the application menu */
+  settings = gtk_settings_get_for_screen (gtk_widget_get_screen (GTK_WIDGET (dialog)));
+  g_object_get (settings,
+                "gtk-shell-shows-app-menu", &shows_app_menu,
+                NULL);
+  if (!shows_app_menu)
+    {
+      button = gtk_button_new_from_stock (GTK_STOCK_HELP);
+      g_signal_connect_swapped (button, "clicked", G_CALLBACK (screenshot_display_help), dialog);
+      gtk_container_add (GTK_CONTAINER (button_box),
+                         button);
+      gtk_button_box_set_child_secondary (GTK_BUTTON_BOX (button_box), button, TRUE);
+    }
 
   button = gtk_button_new_with_mnemonic (_("Take _Screenshot"));
-  gtk_widget_set_valign (button, GTK_ALIGN_CENTER);
-  context = gtk_widget_get_style_context (button);
-  gtk_style_context_add_class (context, "suggested-action");
   data = g_new (CaptureData, 1);
   data->widget = dialog;
   data->callback = f;
   data->user_data = user_data;
-  g_signal_connect (button, "clicked", G_CALLBACK (capture_button_clicked_cb), data);
-  gtk_size_group_add_widget (size_group, button);
-  gtk_header_bar_pack_end (GTK_HEADER_BAR (header_bar), button);
+  g_signal_connect (button, "clicked", G_CALLBACK (capure_button_clicked_cb), data);
+  gtk_container_add (GTK_CONTAINER (button_box), button);
   gtk_widget_set_can_default (button, TRUE);
   gtk_widget_grab_default (button);
   g_signal_connect (dialog, "key-press-event",
                     G_CALLBACK (interactive_dialog_key_press_cb), 
                     NULL);
-
-  button = gtk_button_new_with_mnemonic (_("_Cancel"));
-  gtk_widget_set_valign (button, GTK_ALIGN_CENTER);
-  gtk_size_group_add_widget (size_group, button);
-  gtk_header_bar_pack_start (GTK_HEADER_BAR (header_bar), button);
-  g_signal_connect_swapped (button, "clicked",
-                            G_CALLBACK (gtk_widget_destroy), dialog);
-
-  g_object_unref (size_group);
 
   gtk_widget_show_all (dialog);
 

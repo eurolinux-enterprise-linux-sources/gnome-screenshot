@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
  * USA
  */
 
@@ -29,7 +29,6 @@ typedef struct {
   GSettings *settings;
 
   gchar *save_dir;
-  gchar *file_type;
   GFile *file;
 
   gboolean copy_to_clipboard;
@@ -48,20 +47,19 @@ typedef struct {
   gboolean interactive;
 } ScreenshotConfig;
 
-extern ScreenshotConfig *screenshot_config;
+ScreenshotConfig *screenshot_config;
 
-void		screenshot_load_config			(void);
-void		screenshot_save_config			(void);
-gboolean	screenshot_config_parse_command_line	(gboolean clipboard_arg,
-							 gboolean window_arg,
-							 gboolean area_arg,
-							 gboolean include_border_arg,
-							 gboolean disable_border_arg,
-							 gboolean include_pointer_arg,
-							 const gchar *border_effect_arg,
-							 guint delay_arg,
-							 gboolean interactive_arg,
-							 const gchar *file_arg);
+gboolean screenshot_load_config (gboolean clipboard_arg,
+                                 gboolean window_arg,
+                                 gboolean area_arg,
+                                 gboolean include_border_arg,
+                                 gboolean disable_border_arg,
+                                 gboolean include_pointer_arg,
+                                 const gchar *border_effect_arg,
+                                 guint delay_arg,
+                                 gboolean interactive_arg,
+                                 const gchar *file_arg);
+void screenshot_save_config      (void);
 
 G_END_DECLS
 

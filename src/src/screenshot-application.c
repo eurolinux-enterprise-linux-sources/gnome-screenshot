@@ -16,12 +16,11 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
  * USA
  */
 
-#include "config.h"
-
+#include <config.h>
 #include <gdk/gdkx.h>
 #include <gdk/gdkkeysyms.h>
 #include <fcntl.h>
@@ -108,22 +107,17 @@ set_recent_entry (ScreenshotApplication *self)
 }
 
 static void
-screenshot_close_interactive_dialog (ScreenshotApplication *self)
-{
-  ScreenshotDialog *dialog = self->priv->dialog;
-  save_folder_to_settings (self);
-  gtk_widget_destroy (dialog->dialog);
-  g_free (dialog);
-}
-
-static void
 save_pixbuf_handle_success (ScreenshotApplication *self)
 {
   set_recent_entry (self);
 
   if (screenshot_config->interactive)
     {
-      screenshot_close_interactive_dialog (self);
+      ScreenshotDialog *dialog = self->priv->dialog;
+
+      save_folder_to_settings (self);
+      gtk_widget_destroy (dialog->dialog);
+      g_free (dialog);
     }
   else
     {
@@ -145,10 +139,9 @@ save_pixbuf_handle_error (ScreenshotApplication *self,
           !self->priv->should_overwrite)
         {
           gchar *folder = screenshot_dialog_get_folder (dialog);
-          gchar *folder_uri = g_path_get_basename (folder);
-          gchar *folder_name = g_uri_unescape_string (folder_uri, NULL);
+          gchar *folder_name = g_path_get_basename (folder);
           gchar *file_name = screenshot_dialog_get_filename (dialog);
-          gchar *detail = g_strdup_printf (_("A file named “%s” already exists in “%s”"),
+          gchar *detail = g_strdup_printf (_("A file named \"%s\" already exists in \"%s\""),
                                            file_name, folder_name);
           gint response;
                                              
@@ -159,7 +152,6 @@ save_pixbuf_handle_error (ScreenshotApplication *self,
                                              detail);
 
           g_free (folder);
-          g_free (folder_uri);
           g_free (folder_name);
           g_free (file_name);
           g_free (detail);
@@ -289,6 +281,19 @@ save_with_description (ScreenshotApplication *self,
 }
 
 static void
+save_with_profile (ScreenshotApplication *self,
+                   GFileOutputStream     *os,
+                   gchar                 *format)
+{
+  gdk_pixbuf_save_to_stream_async (self->priv->screenshot,
+                                   G_OUTPUT_STREAM (os),
+                                   format, NULL,
+                                   save_pixbuf_ready_cb, self,
+                                   "icc-profile", self->priv->icc_profile_base64,
+                                   NULL);
+}
+
+static void
 save_with_no_profile_or_description (ScreenshotApplication *self,
                                      GFileOutputStream     *os,
                                      gchar                 *format)
@@ -387,13 +392,6 @@ screenshot_save_to_file (ScreenshotApplication *self)
 }
 
 static void
-screenshot_back (ScreenshotApplication *self)
-{
-  screenshot_close_interactive_dialog (self);
-  screenshot_show_interactive_dialog (self);
-}
-
-static void
 screenshot_save_to_clipboard (ScreenshotApplication *self)
 {
   GtkClipboard *clipboard;
@@ -417,9 +415,6 @@ screenshot_dialog_response_cb (ScreenshotResponse response,
       break;
     case SCREENSHOT_RESPONSE_COPY:
       screenshot_save_to_clipboard (self);
-      break;
-    case SCREENSHOT_RESPONSE_BACK:
-      screenshot_back (self);
       break;
     default:
       g_assert_not_reached ();
@@ -529,9 +524,6 @@ finish_prepare_screenshot (ScreenshotApplication *self,
         case 'b': /* border */
           screenshot_add_border (&screenshot);
           break;
-        case 'v': /* vintage */
-          screenshot_add_vintage (&screenshot);
-          break;
         case 'n': /* none */
         default:
           break;
@@ -628,53 +620,11 @@ screenshot_start (ScreenshotApplication *self)
     g_idle_add (prepare_screenshot_timeout, self);
 }
 
-static gboolean version_arg = FALSE;
-
-static const GOptionEntry entries[] = {
-  { "clipboard", 'c', 0, G_OPTION_ARG_NONE, NULL, N_("Send the grab directly to the clipboard"), NULL },
-  { "window", 'w', 0, G_OPTION_ARG_NONE, NULL, N_("Grab a window instead of the entire screen"), NULL },
-  { "area", 'a', 0, G_OPTION_ARG_NONE, NULL, N_("Grab an area of the screen instead of the entire screen"), NULL },
-  { "include-border", 'b', 0, G_OPTION_ARG_NONE, NULL, N_("Include the window border with the screenshot"), NULL },
-  { "remove-border", 'B', 0, G_OPTION_ARG_NONE, NULL, N_("Remove the window border from the screenshot"), NULL },
-  { "include-pointer", 'p', 0, G_OPTION_ARG_NONE, NULL, N_("Include the pointer with the screenshot"), NULL },
-  { "delay", 'd', 0, G_OPTION_ARG_INT, NULL, N_("Take screenshot after specified delay [in seconds]"), N_("seconds") },
-  { "border-effect", 'e', 0, G_OPTION_ARG_STRING, NULL, N_("Effect to add to the border (shadow, border, vintage or none)"), N_("effect") },
-  { "interactive", 'i', 0, G_OPTION_ARG_NONE, NULL, N_("Interactively set options"), NULL },
-  { "file", 'f', 0, G_OPTION_ARG_FILENAME, NULL, N_("Save screenshot directly to this file"), N_("filename") },
-  { "version", 0, 0, G_OPTION_ARG_NONE, &version_arg, N_("Print version information and exit"), NULL },
-  { NULL },
-};
-
-static gint
-screenshot_application_handle_local_options (GApplication *app,
-                                             GVariantDict *options)
+static gboolean
+screenshot_application_local_command_line (GApplication *app,
+                                           gchar ***arguments,
+                                           gint *exit_status)
 {
-  if (version_arg)
-    {
-      g_print ("%s %s\n", g_get_application_name (), VERSION);
-      exit (EXIT_SUCCESS);
-    }
-
-  /* Start headless instances in non-unique mode */
-  if (!g_variant_dict_contains (options, "interactive"))
-    {
-      GApplicationFlags old_flags;
-
-      old_flags = g_application_get_flags (app);
-      if ((old_flags & G_APPLICATION_IS_SERVICE) == 0)
-        {
-          g_application_set_flags (app, old_flags | G_APPLICATION_NON_UNIQUE);
-        }
-    }
-
-  return -1;
-}
-
-static gint
-screenshot_application_command_line (GApplication            *app,
-                                     GApplicationCommandLine *command_line)
-{
-  ScreenshotApplication *self = SCREENSHOT_APPLICATION (app);
   gboolean clipboard_arg = FALSE;
   gboolean window_arg = FALSE;
   gboolean area_arg = FALSE;
@@ -685,46 +635,103 @@ screenshot_application_command_line (GApplication            *app,
   gchar *border_effect_arg = NULL;
   guint delay_arg = 0;
   gchar *file_arg = NULL;
-  GVariantDict *options;
-  gint exit_status = EXIT_SUCCESS;
+  const GOptionEntry entries[] = {
+    { "clipboard", 'c', 0, G_OPTION_ARG_NONE, &clipboard_arg, N_("Send the grab directly to the clipboard"), NULL },
+    { "window", 'w', 0, G_OPTION_ARG_NONE, &window_arg, N_("Grab a window instead of the entire screen"), NULL },
+    { "area", 'a', 0, G_OPTION_ARG_NONE, &area_arg, N_("Grab an area of the screen instead of the entire screen"), NULL },
+    { "include-border", 'b', 0, G_OPTION_ARG_NONE, &include_border_arg, N_("Include the window border with the screenshot"), NULL },
+    { "remove-border", 'B', 0, G_OPTION_ARG_NONE, &disable_border_arg, N_("Remove the window border from the screenshot"), NULL },
+    { "include-pointer", 'p', 0, G_OPTION_ARG_NONE, &include_pointer_arg, N_("Include the pointer with the screenshot"), NULL },
+    { "delay", 'd', 0, G_OPTION_ARG_INT, &delay_arg, N_("Take screenshot after specified delay [in seconds]"), N_("seconds") },
+    { "border-effect", 'e', 0, G_OPTION_ARG_STRING, &border_effect_arg, N_("Effect to add to the border (shadow, border or none)"), N_("effect") },
+    { "interactive", 'i', 0, G_OPTION_ARG_NONE, &interactive_arg, N_("Interactively set options"), NULL },
+    { "file", 'f', 0, G_OPTION_ARG_FILENAME, &file_arg, N_("Save screenshot directly to this file"), N_("filename") },
+    { NULL },
+  };
+
+  GOptionContext *context;
+  GError *error = NULL;
+  gint argc = 0;
+  gchar **argv = NULL;
   gboolean res;
 
-  options = g_application_command_line_get_options_dict (command_line);
-  g_variant_dict_lookup (options, "clipboard", "b", &clipboard_arg);
-  g_variant_dict_lookup (options, "window", "b", &window_arg);
-  g_variant_dict_lookup (options, "area", "b", &area_arg);
-  g_variant_dict_lookup (options, "include-border", "b", &include_border_arg);
-  g_variant_dict_lookup (options, "remove-border", "b", &disable_border_arg);
-  g_variant_dict_lookup (options, "include-pointer", "b", &include_pointer_arg);
-  g_variant_dict_lookup (options, "interactive", "b", &interactive_arg);
-  g_variant_dict_lookup (options, "border-effect", "&s", &border_effect_arg);
-  g_variant_dict_lookup (options, "delay", "i", &delay_arg);
-  g_variant_dict_lookup (options, "file", "^&ay", &file_arg);
+  *exit_status = EXIT_SUCCESS;
+  argv = *arguments;
+  argc = g_strv_length (argv);
 
-  res = screenshot_config_parse_command_line (clipboard_arg,
-                                              window_arg,
-                                              area_arg,
-                                              include_border_arg,
-                                              disable_border_arg,
-                                              include_pointer_arg,
-                                              border_effect_arg,
-                                              delay_arg,
-                                              interactive_arg,
-                                              file_arg);
-  if (!res)
+  context = g_option_context_new (_("Take a picture of the screen"));
+  g_option_context_add_main_entries (context, entries, NULL);
+  g_option_context_add_group (context, gtk_get_option_group (TRUE));
+
+  if (!g_option_context_parse (context, &argc, &argv, &error))
     {
-      exit_status = EXIT_FAILURE;
+      g_critical ("Unable to parse arguments: %s", error->message);
+      g_error_free (error);
+
+      *exit_status = EXIT_FAILURE;
       goto out;
     }
 
-  /* interactive mode: trigger the dialog and wait for the response */
-  if (screenshot_config->interactive)
-    g_application_activate (app);
-  else
-    screenshot_start (self);
+  res = screenshot_load_config (clipboard_arg,
+                                window_arg,
+                                area_arg,
+                                include_border_arg,
+                                disable_border_arg,
+                                include_pointer_arg,
+                                border_effect_arg,
+                                delay_arg,
+                                interactive_arg,
+                                file_arg);
+
+  if (!res)
+    {
+      *exit_status = EXIT_FAILURE;
+      goto out;
+    }
+
+  if (!g_application_register (app, NULL, &error)) 
+    {
+      g_printerr ("Could not register the application: %s\n", error->message);
+      g_error_free (error);
+
+      *exit_status = EXIT_FAILURE;
+    }
 
  out:
-  return exit_status;
+  g_option_context_free (context);
+  g_free (border_effect_arg);
+  g_free (file_arg);
+
+  return TRUE;	
+}
+
+static void
+register_screenshooter_icon (GtkIconFactory * factory)
+{
+  GtkIconSource *source;
+  GtkIconSet *icon_set;
+
+  source = gtk_icon_source_new ();
+  gtk_icon_source_set_icon_name (source, SCREENSHOOTER_ICON);
+
+  icon_set = gtk_icon_set_new ();
+  gtk_icon_set_add_source (icon_set, source);
+
+  gtk_icon_factory_add (factory, SCREENSHOOTER_ICON, icon_set);
+  gtk_icon_set_unref (icon_set);
+  gtk_icon_source_free (source);
+}
+
+static void
+screenshooter_init_stock_icons (void)
+{
+  GtkIconFactory *factory;
+
+  factory = gtk_icon_factory_new ();
+  gtk_icon_factory_add_default (factory);
+
+  register_screenshooter_icon (factory);
+  g_object_unref (factory);
 }
 
 static void
@@ -776,67 +783,23 @@ action_about (GSimpleAction *action,
                          NULL);
 }
 
-static void
-action_screen_shot (GSimpleAction *action,
-                    GVariant *parameter,
-                    gpointer user_data)
-{
-  ScreenshotApplication *self = SCREENSHOT_APPLICATION (user_data);
-
-  screenshot_config_parse_command_line (FALSE, /* clipboard */
-                                        FALSE,  /* window */
-                                        FALSE, /* area */
-                                        FALSE, /* include border */
-                                        FALSE, /* disable border */
-                                        FALSE, /* include pointer */
-                                        NULL,  /* border effect */
-                                        0,     /* delay */
-                                        FALSE, /* interactive */
-                                        NULL); /* file */
-  screenshot_start (self);
-}
-
-static void
-action_window_shot (GSimpleAction *action,
-                    GVariant *parameter,
-                    gpointer user_data)
-{
-  ScreenshotApplication *self = SCREENSHOT_APPLICATION (user_data);
-
-  screenshot_config_parse_command_line (FALSE, /* clipboard */
-                                        TRUE,  /* window */
-                                        FALSE, /* area */
-                                        FALSE, /* include border */
-                                        FALSE, /* disable border */
-                                        FALSE, /* include pointer */
-                                        NULL,  /* border effect */
-                                        0,     /* delay */
-                                        FALSE, /* interactive */
-                                        NULL); /* file */
-  screenshot_start (self);
-}
-
 static GActionEntry action_entries[] = {
   { "about", action_about, NULL, NULL, NULL },
   { "help", action_help, NULL, NULL, NULL },
-  { "quit", action_quit, NULL, NULL, NULL },
-  { "screen-shot", action_screen_shot, NULL, NULL, NULL },
-  { "window-shot", action_window_shot, NULL, NULL, NULL }
+  { "quit", action_quit, NULL, NULL, NULL }
 };
 
 static void
 screenshot_application_startup (GApplication *app)
 {
-  GMenuModel *menu;
-  GtkBuilder *builder;
   ScreenshotApplication *self = SCREENSHOT_APPLICATION (app);
+  GtkBuilder *builder;
+  GMenuModel *menu;
 
   G_APPLICATION_CLASS (screenshot_application_parent_class)->startup (app);
 
-  screenshot_load_config ();
-
-  g_set_application_name (_("Screenshot"));
   gtk_window_set_default_icon_name (SCREENSHOOTER_ICON);
+  screenshooter_init_stock_icons ();
 
   g_action_map_add_action_entries (G_ACTION_MAP (self), action_entries,
                                    G_N_ELEMENTS (action_entries), self);
@@ -844,26 +807,16 @@ screenshot_application_startup (GApplication *app)
   builder = gtk_builder_new ();
   gtk_builder_add_from_resource (builder, "/org/gnome/screenshot/screenshot-app-menu.ui", NULL);
   menu = G_MENU_MODEL (gtk_builder_get_object (builder, "app-menu"));
-  gtk_application_set_app_menu (GTK_APPLICATION (app), menu);
+  gtk_application_set_app_menu (GTK_APPLICATION (self), menu);
 
   g_object_unref (builder);
   g_object_unref (menu);
-}
 
-static void
-screenshot_application_activate (GApplication *app)
-{
-  GtkWindow *window;
-
-  window = gtk_application_get_active_window (GTK_APPLICATION (app));
-  if (window != NULL)
-    {
-      gtk_window_present (GTK_WINDOW (window));
-      return;
-    }
-
-  screenshot_config->interactive = TRUE;
-  screenshot_show_interactive_dialog (SCREENSHOT_APPLICATION (app));
+  /* interactive mode: trigger the dialog and wait for the response */
+  if (screenshot_config->interactive)
+    screenshot_show_interactive_dialog (self);
+  else
+    screenshot_start (self);
 }
 
 static void
@@ -886,10 +839,8 @@ screenshot_application_class_init (ScreenshotApplicationClass *klass)
 
   oclass->finalize = screenshot_application_finalize;
 
-  aclass->handle_local_options = screenshot_application_handle_local_options;
-  aclass->command_line = screenshot_application_command_line;
+  aclass->local_command_line = screenshot_application_local_command_line;
   aclass->startup = screenshot_application_startup;
-  aclass->activate = screenshot_application_activate;
 
   g_type_class_add_private (klass, sizeof (ScreenshotApplicationPriv));
 }
@@ -899,15 +850,12 @@ screenshot_application_init (ScreenshotApplication *self)
 {
   self->priv = G_TYPE_INSTANCE_GET_PRIVATE (self, SCREENSHOT_TYPE_APPLICATION,
                                             ScreenshotApplicationPriv);
-
-  g_application_add_main_option_entries (G_APPLICATION (self), entries);
 }
 
 ScreenshotApplication *
 screenshot_application_new (void)
 {
-  return g_object_new (SCREENSHOT_TYPE_APPLICATION,
+  return g_object_new (SCREENSHOT_TYPE_APPLICATION, 
                        "application-id", "org.gnome.Screenshot",
-                       "flags", G_APPLICATION_HANDLES_COMMAND_LINE,
                        NULL);
 }

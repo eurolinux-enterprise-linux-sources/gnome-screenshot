@@ -15,11 +15,10 @@
  *
  * You should have received a copy of the GNU General Public
  * License along with this program; if not, write to the
- * Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  */
 
-#include "config.h"
-
+#include <config.h>
 #include <gtk/gtk.h>
 
 #include "screenshot-area-selection.h"
@@ -223,11 +222,13 @@ emit_select_callback_in_idle (gpointer user_data)
   return FALSE;
 }
 
-static void
-screenshot_select_area_x11_async (CallbackData *cb_data)
+void
+screenshot_select_area_async (SelectAreaCallback callback,
+                              gpointer callback_data)
 {
   GdkCursor *cursor;
   select_area_filter_data  data;
+  CallbackData *cb_data;
   GdkDeviceManager *manager;
   GdkDevice *pointer, *keyboard;
   GdkGrabStatus res;
@@ -239,6 +240,10 @@ screenshot_select_area_x11_async (CallbackData *cb_data)
   data.button_pressed = FALSE;
   data.aborted = FALSE;
   data.window = create_select_window();
+
+  cb_data = g_slice_new0 (CallbackData);
+  cb_data->callback = callback;
+  cb_data->callback_data = callback_data;
 
   g_signal_connect (data.window, "key-press-event", G_CALLBACK (select_area_key_press), &data);
   g_signal_connect (data.window, "button-press-event", G_CALLBACK (select_area_button_press), &data);
@@ -294,68 +299,4 @@ screenshot_select_area_x11_async (CallbackData *cb_data)
    * way to know that.
    */
   g_timeout_add (200, emit_select_callback_in_idle, cb_data);
-}
-
-static void
-select_area_done (GObject *source_object,
-                  GAsyncResult *res,
-                  gpointer user_data)
-{
-  CallbackData *cb_data = user_data;
-  GError *error = NULL;
-  GVariant *ret;
-
-  ret = g_dbus_connection_call_finish (G_DBUS_CONNECTION (source_object), res, &error);
-  if (error != NULL)
-    {
-      if (g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
-        {
-          g_error_free (error);
-          cb_data->aborted = TRUE;
-          g_idle_add (emit_select_callback_in_idle, cb_data);
-          return;
-        }
-
-      g_message ("Unable to select area using GNOME Shell's builtin screenshot "
-                 "interface, resorting to fallback X11.");
-      g_error_free (error);
-
-      screenshot_select_area_x11_async (cb_data);
-      return;
-    }
-
-  g_variant_get (ret, "(iiii)",
-                 &cb_data->rectangle.x,
-                 &cb_data->rectangle.y,
-                 &cb_data->rectangle.width,
-                 &cb_data->rectangle.height);
-  g_variant_unref (ret);
-
-  g_idle_add (emit_select_callback_in_idle, cb_data);
-}
-
-void
-screenshot_select_area_async (SelectAreaCallback callback,
-                              gpointer callback_data)
-{
-  CallbackData *cb_data;
-  GDBusConnection *connection;
-
-  cb_data = g_slice_new0 (CallbackData);
-  cb_data->callback = callback;
-  cb_data->callback_data = callback_data;
-
-  connection = g_application_get_dbus_connection (g_application_get_default ());
-  g_dbus_connection_call (connection,
-                          "org.gnome.Shell.Screenshot",
-                          "/org/gnome/Shell/Screenshot",
-                          "org.gnome.Shell.Screenshot",
-                          "SelectArea",
-                          NULL,
-                          NULL,
-                          G_DBUS_CALL_FLAGS_NONE,
-                          G_MAXINT,
-                          NULL,
-                          select_area_done,
-                          cb_data);
 }
