@@ -1,6 +1,6 @@
 Name:           gnome-screenshot
 Version:        3.14.0
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        A screenshot utility for GNOME
 
 Group:          Applications/System
@@ -9,6 +9,7 @@ URL:            http://www.gnome.org
 Source0:        http://download.gnome.org/sources/gnome-screenshot/3.14/gnome-screenshot-%{version}.tar.xz
 
 Patch0:         filenames.patch
+Patch1:         0001-Updated-Italian-translation.patch
 
 BuildRequires: gtk3-devel
 BuildRequires: libcanberra-devel
@@ -26,6 +27,7 @@ gnome-screenshot lets you take pictures of your screen.
 %prep
 %setup -q
 %patch0 -p1 -b .filenames
+%patch1 -p1 -b .italian-translation
 
 %build
 %configure
@@ -61,6 +63,10 @@ glib-compile-schemas %{_datadir}/glib-2.0/schemas &>/dev/null || :
 %doc %{_mandir}/man1/gnome-screenshot.1.gz
 
 %changelog
+* Mon Feb  8 2016 Rui Matos <rmatos@redhat.com> - 3.14.0-3
+- Update Italian translation
+Resolves: #1272498
+
 * Thu May 14 2015 Rui Matos <rmatos@redhat.com> - 3.14.0-2
 - Don't use colons in filenames
 Resolves: #1162647
